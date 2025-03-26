@@ -37,6 +37,15 @@ public class RetryTemplate implements RetryOperations {
         return null;
     }
 
+	@Override
+	public <R> R execute(Callable<R> retryCallback, RecoveryCallback<R> recoveryCallback) {
+		try {
+			return this.execute(retryCallback);
+		} catch (Exception exception) {
+			return recoveryCallback.recover(exception);
+		}
+	}
+
     public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
     }
