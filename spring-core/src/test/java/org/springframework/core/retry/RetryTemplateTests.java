@@ -5,14 +5,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.retry.support.MaxAttemptsRetryPolicy;
 import org.springframework.core.retry.support.backoff.LinearBackOffPolicy;
 
-import java.util.concurrent.Callable;
-
 class RetryTemplateTests {
 
 	@Test
 	void testRetry() {
 		// given some unreliable code
-		Callable<String> callable = new Callable<>() {
+		RetryCallback<String> callable = new RetryCallback<>() {
 			int failure;
 			@Override
 			public String call() throws Exception {
@@ -41,7 +39,7 @@ class RetryTemplateTests {
 	@Test
 	void testRecovery() {
 		// given some unreliable code
-		Callable<String> callable = new Callable<>() {
+		RetryCallback<String> callable = new RetryCallback<>() {
 			int failure;
 			@Override
 			public String call() throws Exception {
