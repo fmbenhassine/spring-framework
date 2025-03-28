@@ -1,5 +1,7 @@
 package org.springframework.core.retry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.core.retry.support.NeverRetryPolicy;
 import org.springframework.core.retry.support.backoff.ImmediateBackOffPolicy;
 
@@ -7,6 +9,8 @@ import java.time.Duration;
 import java.util.concurrent.Callable;
 
 public class RetryTemplate implements RetryOperations {
+
+	private static final Log log = LogFactory.getLog(RetryTemplate.class);
 
     private RetryPolicy retryPolicy = new NeverRetryPolicy();
 
@@ -19,17 +23,29 @@ public class RetryTemplate implements RetryOperations {
         int attempts = 0;
         int maxAttempts = retryPolicy.getMaxAttempts();
         while(attempts++ <= maxAttempts) {
-            try {
+			if (log.isDebugEnabled()){
+				log.debug("Retry attempt #" + attempts);
+			}
+			try {
                 retryListener.beforeRetry();
                 R result = retryCallback.call();
                 retryListener.onSuccess(result);
-                return result;
+				if (log.isDebugEnabled()){
+					log.debug("Retry attempt #" + attempts + " succeeded");
+				}
+				return result;
             } catch (Exception e) {
                 retryListener.onFailure(e);
                 Duration duration = backOffPolicy.backOff();
                 Thread.sleep(duration.toMillis());
-                if (attempts >= maxAttempts) {
-                    retryListener.onMaxAttempts(e);
+				if (log.isDebugEnabled()){
+					log.debug("Attempt #" + attempts + " failed, backing off for " + duration.toMillis() + "ms");
+				}
+				if (attempts >= maxAttempts) {
+					if (log.isDebugEnabled()){
+						log.debug("Maximum retry attempts " + attempts + " exhausted, aborting execution");
+					}
+					retryListener.onMaxAttempts(e);
                     throw e;
                 }
             }
@@ -37,16 +53,7 @@ public class RetryTemplate implements RetryOperations {
         return null;
     }
 
-	@Override
-	public <R> R execute(Callable<R> retryCallback, RecoveryCallback<R> recoveryCallback) {
-		try {
-			return this.execute(retryCallback);
-		} catch (Exception exception) {
-			return recoveryCallback.recover(exception);
-		}
-	}
-
-    public void setRetryPolicy(RetryPolicy retryPolicy) {
+	public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
     }
 
